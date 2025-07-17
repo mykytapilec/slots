@@ -1,28 +1,63 @@
-Pixi Slot Machine
-A minimal slot machine demo built with PixiJS v8 and Vite. This project demonstrates basic rendering, asset loading, and spin behavior using modern PixiJS with async setup.
+# PIXI.js Slot Machine
 
-Installation:
-npm install
+A simple slot machine with three reels built using PIXI.js.
 
-Run in development:
-npm run dev
-Then open http://localhost:5173 in your browser
+---
 
-Build for production:
-npm run build
+## Features
 
-Project structure:
-public/symbols/ — PNG icons for slot symbols (e.g., armor.png, forest.png)
-src/main.ts — Application entry point
-src/slotMachine.ts — Core slot machine logic
-vite.config.ts — Vite configuration
-index.html — HTML template
-tsconfig.json — TypeScript configuration
-package.json — Dependencies and scripts
+- 3 reels, each showing 3 visible symbols.
+- Each reel contains 4 unique symbols (no repeats within a reel) for smooth scrolling.
+- Masking limits the visible area to exactly 3 symbols per reel.
+- "SPIN" button starts the spinning with smooth deceleration.
+- Symbols randomize on each spin to ensure different outcomes.
+- Winning symbols are highlighted when matches occur.
+- Responsive resizing adapts to window size changes.
 
-Technologies used:
-PixiJS v8
-TypeScript
-Vite
+---
 
-License: MIT
+## Technologies
+
+- [PIXI.js](https://pixijs.com/) — WebGL rendering library.
+- TypeScript — for type safety and improved developer experience.
+- ES6 modules.
+
+---
+
+## Installation and Running
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/mykytapilec/slots.git
+   cd slot-machine
+
+2. Install dependencies:
+    npm install
+
+3. Run the development server:
+    npm run dev 
+    or 
+    npx vite
+
+4. Open your browser and navigate to:
+    http://localhost:5173
+    
+## Project Structure
+slotMachine.ts — Main SlotMachine class handling logic and rendering.
+/symbols/ — Folder containing symbol images.
+/backgrounds/ — Folder with background images.
+index.html — Basic HTML page to load the app.
+
+## Usage
+Click the SPIN button to start the reels spinning.
+Symbols scroll at different speeds and gradually decelerate.
+After stopping, symbols align and matches on the middle row are highlighted.
+Resize the browser window — the layout adjusts automatically.
+
+## Adding New Symbols
+Add PNG files of new symbols to the /symbols/ folder.
+Add their names to the SYMBOLS array in slotMachine.ts.
+Ensure the images are uniform in size with transparent backgrounds.
+
+License
+MIT License © Mikita Pilets
