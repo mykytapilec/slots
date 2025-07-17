@@ -14,10 +14,9 @@ export class SlotMachine {
   private spinButton!: PIXI.Container;
 
   private reelSpeeds: number[] = [];
-  private reelBaseSpeeds = [1.5, 1.0, 0.7]; // разные скорости колонок
+  private reelBaseSpeeds = [15, 10, 7]; // Скорость в пикселях за тик, увеличил для видимой прокрутки
   private decelerationStartTime = 2000; // время начала замедления (мс)
 
-  // Для подсветки выигрыша
   private highlightContainers: PIXI.Container[] = [];
 
   constructor(app: PIXI.Application) {
@@ -26,15 +25,8 @@ export class SlotMachine {
   }
 
   public async start() {
-    console.log("Start loading assets...");
-    try {
-      await this.loadAssets();
-      console.log("Assets loaded. Starting setup...");
-      this.setup();
-      console.log("Setup complete.");
-    } catch (err) {
-      console.error("Asset loading failed:", err);
-    }
+    await this.loadAssets();
+    this.setup();
   }
 
   private async loadAssets() {
@@ -59,24 +51,40 @@ export class SlotMachine {
 
     const symbolSize = this.app.renderer.width / 8;
     const totalReels = 3;
-    const totalSymbolsPerReel = 3;
+    const visibleSymbols = 3;
+    const reelSymbolsCount = visibleSymbols + 1; // 4 символа, чтобы при прокрутке не было пустот
     const reelsWidth = totalReels * symbolSize;
     const startX = (this.app.renderer.width - reelsWidth) / 2;
-    const centerY = (this.app.renderer.height - symbolSize * totalSymbolsPerReel) / 2;
+    const startY = (this.app.renderer.height - symbolSize * visibleSymbols) / 2;
 
     for (let i = 0; i < totalReels; i++) {
       const reel = new PIXI.Container();
       reel.x = startX + i * symbolSize;
-      reel.y = centerY; // Фиксируем вертикальную позицию барабана
+      reel.y = startY;
 
-      for (let j = 0; j < totalSymbolsPerReel; j++) {
-        const symbolName = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+      // Создаем маску, ограничивающую высоту области видимости 3 символами
+      const mask = new PIXI.Graphics();
+      mask.beginFill(0xffffff);
+      mask.drawRect(0, 0, symbolSize, symbolSize * visibleSymbols);
+      mask.endFill();
+      reel.addChild(mask);
+      reel.mask = mask;
+
+      // Заполняем барабан 4 уникальными символами
+      const availableSymbols = [...SYMBOLS];
+      for (let j = 0; j < reelSymbolsCount; j++) {
+        const randomIndex = Math.floor(Math.random() * availableSymbols.length);
+        const symbolName = availableSymbols.splice(randomIndex, 1)[0];
+
         const texture = PIXI.Assets.get(symbolName);
         if (!texture || !(texture instanceof PIXI.Texture)) continue;
+
         const sprite = new PIXI.Sprite(texture);
         sprite.width = symbolSize;
         sprite.height = symbolSize;
         sprite.y = j * symbolSize;
+        (sprite as any).symbolName = symbolName;
+
         reel.addChild(sprite);
       }
 
@@ -137,6 +145,38 @@ export class SlotMachine {
     if (this.spinning) return;
     this.spinning = true;
     this.spinTime = 0;
+
+    // Для каждого барабана перемешиваем символы заново, чтобы результат менялся
+    this.reels.forEach((reel) => {
+      // Удаляем все символы из барабана, кроме маски (первый ребенок - маска)
+      while (reel.children.length > 1) {
+        const child = reel.children[1];
+        reel.removeChild(child);
+        child.destroy();
+      }
+
+      const symbolSize = this.app.renderer.width / 8;
+      const visibleSymbols = 3;
+      const reelSymbolsCount = visibleSymbols + 1;
+
+      const availableSymbols = [...SYMBOLS];
+      for (let j = 0; j < reelSymbolsCount; j++) {
+        const randomIndex = Math.floor(Math.random() * availableSymbols.length);
+        const symbolName = availableSymbols.splice(randomIndex, 1)[0];
+
+        const texture = PIXI.Assets.get(symbolName);
+        if (!texture || !(texture instanceof PIXI.Texture)) continue;
+
+        const sprite = new PIXI.Sprite(texture);
+        sprite.width = symbolSize;
+        sprite.height = symbolSize;
+        sprite.y = j * symbolSize;
+        (sprite as any).symbolName = symbolName;
+
+        reel.addChild(sprite);
+      }
+    });
+
     this.reelSpeeds = [...this.reelBaseSpeeds];
     this.clearHighlights();
     this.spinTicker.start();
@@ -157,23 +197,46 @@ export class SlotMachine {
     }
 
     const symbolSize = this.app.renderer.width / 8;
-    const totalSymbolsPerReel = 3;
+    const visibleSymbols = 3;
+    const reelSymbolsCount = visibleSymbols + 1;
 
     for (let i = 0; i < this.reels.length; i++) {
       const reel = this.reels[i];
-      reel.y = (this.app.renderer.height - symbolSize * totalSymbolsPerReel) / 2; // фиксируем контейнер
+      reel.y = (this.app.renderer.height - symbolSize * visibleSymbols) / 2;
 
-      reel.children.forEach((child) => {
+      reel.children.forEach((child, idx) => {
+        if (idx === 0) return; // маска не трогаем
+
         child.y += this.reelSpeeds[i];
       });
 
-      // Циклический перенос символов при выходе за нижнюю границу
-      reel.children.forEach((child) => {
-        if (child.y >= symbolSize * totalSymbolsPerReel) {
-          child.y -= symbolSize * totalSymbolsPerReel;
+      reel.children.forEach((child, idx) => {
+        if (idx === 0) return; // маска не трогаем
+
+        if (child.y >= symbolSize * reelSymbolsCount) {
+          child.y -= symbolSize * reelSymbolsCount;
 
           const sprite = child as PIXI.Sprite;
-          const newSymbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+
+          // Проверяем текущие символы кроме этого спрайта
+          const currentSymbols = reel.children
+            .filter((c, ci) => ci !== idx && ci !== 0)
+            .map((c) => (c as any).symbolName);
+
+          const availableSymbols = SYMBOLS.filter(
+            (s) => !currentSymbols.includes(s)
+          );
+
+          let newSymbol: string;
+          if (availableSymbols.length === 0) {
+            newSymbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+          } else {
+            newSymbol =
+              availableSymbols[Math.floor(Math.random() * availableSymbols.length)];
+          }
+
+          (sprite as any).symbolName = newSymbol;
+
           const newTexture = PIXI.Assets.get(newSymbol);
           if (newTexture instanceof PIXI.Texture) {
             sprite.texture = newTexture;
@@ -182,7 +245,6 @@ export class SlotMachine {
       });
     }
 
-    // Остановка при завершении времени и нулевой скорости
     if (
       this.spinTime >= this.spinDuration &&
       this.reelSpeeds.every((speed) => speed <= 0.01)
@@ -190,10 +252,11 @@ export class SlotMachine {
       this.spinTicker.stop();
       this.spinning = false;
 
-      // Выравнивание символов в барабанах по фиксированным позициям
+      // Зафиксировать позиции символов — ровно по символу, чтобы не было смещения
       this.reels.forEach((reel) => {
-        reel.children.forEach((child, index) => {
-          child.y = index * symbolSize;
+        reel.children.forEach((child, idx) => {
+          if (idx === 0) return; // маска
+          child.y = (idx - 1) * symbolSize; // -1, потому что idx=0 — маска
         });
       });
 
@@ -204,13 +267,13 @@ export class SlotMachine {
   private checkWinEffect() {
     this.clearHighlights();
 
-    // Берём символы в среднем ряду (индекс 1)
-    const middleRowIndex = 1;
-    const symbolsInMiddleRow = this.reels.map((reel) =>
-      reel.children[middleRowIndex]
-    ) as PIXI.Sprite[];
+    const middleRowIndex = 1; // второй символ в наборе из 3 видимых
 
-    // Проверяем совпадения соседних символов
+    const symbolsInMiddleRow = this.reels.map((reel) => {
+      // Учитывая, что первый ребенок - маска, берем второй, третий и т.д.
+      return reel.children[middleRowIndex + 1] as PIXI.Sprite;
+    });
+
     let pairs: number[][] = [];
 
     for (let i = 0; i < symbolsInMiddleRow.length - 1; i++) {
@@ -222,16 +285,13 @@ export class SlotMachine {
     }
 
     if (pairs.length > 0) {
-      // Если три подряд (0-1 и 1-2), считаем это три в ряд
       if (
-        pairs.some(
-          (pair) => pair[0] === 0 && pairs.some((p) => p[0] === 1)
-        )
+        pairs.some((pair) => pair[0] === 0) &&
+        pairs.some((pair) => pair[0] === 1)
       ) {
-        // 3 символа подряд совпали
+        // 3 подряд
         this.highlightSymbols(symbolsInMiddleRow, 0xffffff, 0.8);
       } else {
-        // Подсветить пары соседних символов
         pairs.forEach(([i, j]) => {
           this.highlightSymbol(symbolsInMiddleRow[i], 0xffff00, 0.8);
           this.highlightSymbol(symbolsInMiddleRow[j], 0xffff00, 0.8);
@@ -240,11 +300,7 @@ export class SlotMachine {
     }
   }
 
-  private highlightSymbols(
-    symbols: PIXI.Sprite[],
-    color: number,
-    alpha: number
-  ) {
+  private highlightSymbols(symbols: PIXI.Sprite[], color: number, alpha: number) {
     symbols.forEach((sym) => this.highlightSymbol(sym, color, alpha));
   }
 
@@ -274,23 +330,34 @@ export class SlotMachine {
   public resize() {
     const symbolSize = this.app.renderer.width / 8;
     const totalReels = 3;
-    const totalSymbolsPerReel = 3;
+    const visibleSymbols = 3;
+
     const reelsWidth = totalReels * symbolSize;
     const startX = (this.app.renderer.width - reelsWidth) / 2;
-    const centerY = (this.app.renderer.height - symbolSize * totalSymbolsPerReel) / 2;
+    const startY = (this.app.renderer.height - symbolSize * visibleSymbols) / 2;
 
     this.reels.forEach((reel, i) => {
       reel.x = startX + i * symbolSize;
-      reel.y = centerY; // фиксируем вертикальную позицию барабана
+      reel.y = startY;
 
       reel.children.forEach((child, j) => {
+        if (j === 0) {
+          // Маска
+          const mask = reel.mask as PIXI.Graphics;
+          if (mask) {
+            mask.clear();
+            mask.beginFill(0xffffff);
+            mask.drawRect(0, 0, symbolSize, symbolSize * visibleSymbols);
+            mask.endFill();
+          }
+          return;
+        }
         const sprite = child as PIXI.Sprite;
         sprite.width = symbolSize;
         sprite.height = symbolSize;
 
-        // Выравниваем позицию по вертикали, только если не крутится
         if (!this.spinning) {
-          sprite.y = j * symbolSize;
+          sprite.y = (j - 1) * symbolSize; // смещение из-за маски на 0 индексе
         }
       });
     });
