@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { SlotMachine } from "./slotMachine";
+import { SlotMachine } from "./slotMachine/index";
 
 let app: PIXI.Application;
 let slotMachine: SlotMachine;
@@ -9,7 +9,7 @@ async function main() {
 
   app = new PIXI.Application();
   await app.init({
-    resizeTo: window, // 👈 Автоматическая адаптация к размеру окна
+    resizeTo: window,
     backgroundColor: 0x1099bb,
   });
 
@@ -22,7 +22,7 @@ async function main() {
 
 window.addEventListener("resize", () => {
   if (slotMachine) {
-    slotMachine.resize(); // 👈 Метод для перерасчёта позиций и размеров
+    slotMachine.resize();
   }
 });
 

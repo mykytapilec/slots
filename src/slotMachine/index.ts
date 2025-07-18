@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
-import { loadAssets, SYMBOLS } from "./assets";
-import { createReels, alignReelsSymbols } from "./reels";
+import { loadAssets } from "./assets";
+import { createReels } from "./reels";
 import { SpinControl } from "./spinControl";
 import { createButton, highlightSymbol } from "./ui";
 
