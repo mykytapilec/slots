@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { SlotMachine } from "./slotMachine/index";
+import { SlotMachine } from "./slotMachine";
 
 let app: PIXI.Application;
 let slotMachine: SlotMachine;
