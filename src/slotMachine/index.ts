@@ -6,7 +6,7 @@ import { createButton, highlightSymbol } from "./ui";
 
 export class SlotMachine {
   private app: PIXI.Application;
-  private reels: PIXI.Container[] = [];
+  private reels: (PIXI.Container & { usedSymbols: string[] })[] = [];
   private spinControl!: SpinControl;
   private background!: PIXI.Sprite;
   private spinButton!: PIXI.Container;
@@ -33,7 +33,7 @@ export class SlotMachine {
 
     const symbolSize = this.app.renderer.width / 8;
 
-    this.reels = createReels(this.app, symbolSize);
+    this.reels = createReels(this.app, symbolSize) as (PIXI.Container & { usedSymbols: string[] })[];
     this.reels.forEach((reel) => this.app.stage.addChild(reel));
 
     this.spinControl = new SpinControl(this.reels);
@@ -45,8 +45,14 @@ export class SlotMachine {
       "SPIN",
       this.app.renderer.width / 2 - 75,
       this.app.renderer.height - 100,
-      () => this.spinControl.startSpin()
+      () => {
+        if (!this.spinControl.isSpinning()) {
+          this.clearHighlights();
+          this.spinControl.startSpin();
+        }
+      }
     );
+
     this.app.stage.addChild(this.spinButton);
   }
 
@@ -121,6 +127,11 @@ export class SlotMachine {
           sprite.y = j * symbolSize;
         }
       });
+
+      if (reel.mask instanceof PIXI.Graphics) {
+        reel.mask.x = reel.x;
+        reel.mask.y = reel.y;
+      }
     });
 
     if (this.background) {

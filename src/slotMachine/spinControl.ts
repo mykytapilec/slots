@@ -2,7 +2,7 @@ import * as PIXI from "pixi.js";
 import { updateReelsSpin, alignReelsSymbols } from "./reels";
 
 export class SpinControl {
-  private reels: PIXI.Container[];
+  private reels: (PIXI.Container & { usedSymbols: string[] })[];
   private reelSpeeds: number[];
   private reelBaseSpeeds: number[];
   private spinDuration: number;
@@ -11,9 +11,9 @@ export class SpinControl {
   private spinning: boolean = false;
   private spinTicker: PIXI.Ticker;
 
-  constructor(reels: PIXI.Container[]) {
+  constructor(reels: (PIXI.Container & { usedSymbols: string[] })[]) {
     this.reels = reels;
-    this.reelBaseSpeeds = [1.5, 1.0, 0.7];
+    this.reelBaseSpeeds = [15, 10, 7]; 
     this.reelSpeeds = [...this.reelBaseSpeeds];
     this.spinDuration = 3000;
     this.decelerationStartTime = 2000;
@@ -22,8 +22,8 @@ export class SpinControl {
     this.spinTicker = new PIXI.Ticker();
     this.spinTicker.stop();
 
-    this.spinTicker.add((ticker) => {
-      this.updateSpin(ticker.deltaMS);
+    this.spinTicker.add(() => {
+      this.updateSpin(this.spinTicker.elapsedMS);
     });
   }
 
@@ -42,8 +42,7 @@ export class SpinControl {
       const elapsed = this.spinTime - this.decelerationStartTime;
       const duration = this.spinDuration - this.decelerationStartTime;
       for (let i = 0; i < this.reelSpeeds.length; i++) {
-        const newSpeed =
-          this.reelBaseSpeeds[i] * (1 - elapsed / duration);
+        const newSpeed = this.reelBaseSpeeds[i] * (1 - elapsed / duration);
         this.reelSpeeds[i] = Math.max(newSpeed, 0);
       }
     }
@@ -53,10 +52,7 @@ export class SpinControl {
 
     updateReelsSpin(this.reels, this.reelSpeeds, symbolSize, totalSymbolsPerReel);
 
-    if (
-      this.spinTime >= this.spinDuration &&
-      this.reelSpeeds.every((s) => s <= 0.01)
-    ) {
+    if (this.spinTime >= this.spinDuration && this.reelSpeeds.every((s) => s <= 0.01)) {
       this.spinTicker.stop();
       this.spinning = false;
       alignReelsSymbols(this.reels, symbolSize);
