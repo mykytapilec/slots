@@ -59,10 +59,11 @@ export class SlotMachine {
   private checkWinEffect() {
     this.clearHighlights();
 
-    const middleRowIndex = 1;
-    const symbolsInMiddleRow = this.reels.map(
-      (reel) => reel.children[middleRowIndex] as PIXI.Sprite
-    );
+    const symbolsInMiddleRow = this.reels.map((reel) => {
+      const sorted = [...reel.children].sort((a, b) => a.y - b.y);
+      return sorted[1] as PIXI.Sprite;
+    });
+
 
     let pairs: number[][] = [];
 

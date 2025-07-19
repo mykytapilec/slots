@@ -56,46 +56,32 @@ export function createReels(app: PIXI.Application, symbolSize: number) {
 }
 
 export function updateReelsSpin(
-  reels: (PIXI.Container & { usedSymbols: string[] })[],
+  reels: PIXI.Container[],
   reelSpeeds: number[],
   symbolSize: number,
   totalSymbolsPerReel: number
 ) {
   for (let i = 0; i < reels.length; i++) {
     const reel = reels[i];
-
     reel.children.forEach((child) => {
       child.y += reelSpeeds[i];
     });
 
-    for (let j = 0; j < reel.children.length; j++) {
-      const sprite = reel.children[j] as PIXI.Sprite;
-      if (sprite.y >= symbolSize * totalSymbolsPerReel) {
-        sprite.y -= symbolSize * totalSymbolsPerReel;
-
-        reel.usedSymbols.shift();
-
-        const availableSymbols = SYMBOLS.filter(s => !reel.usedSymbols.includes(s));
-
-        const newSymbol = availableSymbols.length > 0
-          ? availableSymbols[Math.floor(Math.random() * availableSymbols.length)]
-          : SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-
-        reel.usedSymbols.push(newSymbol);
-
-        const newTexture = PIXI.Assets.get(newSymbol);
-        if (newTexture instanceof PIXI.Texture) {
-          sprite.texture = newTexture;
-        }
+    reel.children.forEach((child) => {
+      if (child.y >= symbolSize * totalSymbolsPerReel) {
+        child.y -= symbolSize * totalSymbolsPerReel;
       }
-    }
+    });
   }
 }
 
 export function alignReelsSymbols(reels: PIXI.Container[], symbolSize: number) {
   reels.forEach((reel) => {
-    reel.children.forEach((child, index) => {
-      child.y = index * symbolSize;
+    const sorted = [...reel.children].sort((a, b) => a.y - b.y);
+
+    sorted.forEach((sprite, i) => {
+      sprite.y = i * symbolSize;
     });
   });
 }
+
