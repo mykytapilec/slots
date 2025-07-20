@@ -11,7 +11,7 @@ export function createButton(
   button.cursor = "pointer";
 
   const graphics = new PIXI.Graphics();
-  graphics.beginFill(0x333333);
+  graphics.beginFill('ff0000', 0.8);
   graphics.drawRoundedRect(0, 0, 150, 50, 10);
   graphics.endFill();
   button.addChild(graphics);
