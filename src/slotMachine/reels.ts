@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { SYMBOLS } from "./assets";
+import { SYMBOLS } from "./constants";
 
 function getUniqueSymbols(count: number): string[] {
   const symbols = [...SYMBOLS];

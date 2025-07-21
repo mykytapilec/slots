@@ -1,6 +1,5 @@
 import * as PIXI from "pixi.js";
-
-const SYMBOLS = ["armor", "forest", "goblin", "milk"];
+import { SYMBOLS } from "./constants";
 
 export async function loadAssets() {
   SYMBOLS.forEach((name) => {
@@ -14,5 +13,3 @@ export async function loadAssets() {
 
   return SYMBOLS;
 }
-
-export { SYMBOLS };

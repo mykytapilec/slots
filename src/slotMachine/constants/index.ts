@@ -1,0 +1,1 @@
+export const SYMBOLS = ["armor", "forest", "goblin", "milk"];
